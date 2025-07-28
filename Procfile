@@ -1,1 +1,1 @@
-worker: python awshost.py
+worker: python main.py
