@@ -1,4 +1,6 @@
-python-telegram-bot
+python-telegram-bot==20.3
+boto3
+flask
 annotated-types==0.7.0
 anyio==4.6.2.post1
 APScheduler==3.6.3
