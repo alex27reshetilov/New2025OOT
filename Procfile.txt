@@ -1,2 +1,1 @@
-worker: python awshost.py
-web: python -m http.server $PORT
+worker: python main.py
