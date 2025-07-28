@@ -12,7 +12,7 @@ from botocore.exceptions import ClientError, NoCredentialsError, PartialCredenti
 
 # Telegram токен з середовища
 TELEGRAM_BOT_TOKEN = os.environ.get['7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c']
-WEBHOOK_BASE_URL = os.environ['https://botbotbot.osc-fr1.scalingo.io']
+WEBHOOK_BASE_URL = os.environ.get['https://botbotbot.osc-fr1.scalingo.io']
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO)
