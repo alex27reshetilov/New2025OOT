@@ -1,5 +1,5 @@
-import re
 import os
+import re
 import logging
 import boto3
 from flask import Flask, request
@@ -10,23 +10,24 @@ from telegram.ext import (
 )
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
 
-# Telegram токен з середовища
+# Завантаження токенів з середовища
 TELEGRAM_BOT_TOKEN = os.environ.get('7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c')
-WEBHOOK_BASE_URL = os.environ.get('https://botbotbot.osc-fr1.scalingo.io')
-
-# Налаштування логування
-logging.basicConfig(level=logging.INFO)
-
-# Глобальна змінна режиму
-response_mode = 'summary'
+WEBHOOK_BASE_URL = os.environ.get('https://botbotbot.osc-fr1.scalingo.io/7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c')
 
 # Flask app
 flask_app = Flask(__name__)
 
-# Telegram app
+# Telegram bot app
 app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-# AWS парсинг та перевірка — як у твоєму коді
+# Логування
+logging.basicConfig(level=logging.INFO)
+
+# Глобальна змінна
+response_mode = 'summary'
+
+# ======== AWS ========
+
 def get_access_key_creation_date(session, access_key_id):
     try:
         iam_client = session.client('iam')
@@ -36,7 +37,6 @@ def get_access_key_creation_date(session, access_key_id):
                 return key_metadata['CreateDate']
     except Exception as e:
         return f"Error: {str(e)}"
-
 
 def check_aws_account_and_quotas(access_key_id, secret_access_key):
     try:
@@ -53,13 +53,12 @@ def check_aws_account_and_quotas(access_key_id, secret_access_key):
             'quotas': quotas,
             'created_at': created_at
         }
-    except (NoCredentialsError, PartialCredentialsError, ClientError) as e:
+    except (NoCredentialsError, PartialCredentialsError, ClientError):
         return {
             'alive': False,
             'quotas': None,
             'created_at': None
         }
-
 
 def get_ec2_quotas(session, region='us-east-1'):
     try:
@@ -69,7 +68,6 @@ def get_ec2_quotas(session, region='us-east-1'):
         return {'on_demand': on_demand_quota, 'spot': spot_quota}
     except Exception as e:
         return {'error': str(e)}
-
 
 def parse_accounts(text):
     accounts = []
@@ -114,7 +112,6 @@ def parse_accounts(text):
             })
     return accounts
 
-
 def find_duplicates(accounts):
     seen_emails = {}
     seen_keys = {}
@@ -132,6 +129,7 @@ def find_duplicates(accounts):
             seen_keys[key] = i
     return duplicates
 
+# ======== Telegram handlers ========
 
 async def send_mode_keyboard(update: Update):
     keyboard = [
@@ -146,7 +144,6 @@ async def send_mode_keyboard(update: Update):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Choose next action:", reply_markup=reply_markup)
-
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global response_mode
@@ -170,7 +167,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("✅ No duplicates found.")
         else:
             await query.edit_message_text("⚠️ Duplicates found:\n\n" + "\n".join(duplicates))
-
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -240,11 +236,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(summary)
     await send_mode_keyboard(update)
 
-# Обробники
+# ======== Handlers ========
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 app.add_handler(CallbackQueryHandler(handle_callback))
 
-# Flask endpoint
+# ======== Webhook endpoint ========
 @flask_app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
 def webhook():
     update = Update.de_json(request.get_json(force=True), app.bot)
@@ -255,11 +251,7 @@ def webhook():
 def index():
     return "Bot is running!"
 
-# Запуск
+# ======== Start ========
 if __name__ == '__main__':
-    app.run_webhook(
-        listen="0.0.0.0",
-        port=int(os.environ.get("PORT", 8443)),
-        webhook_url=f"{WEBHOOK_BASE_URL}/{TELEGRAM_BOT_TOKEN}"
-    )
+    app.bot.set_webhook(url=f"{WEBHOOK_BASE_URL}/{TELEGRAM_BOT_TOKEN}")
     flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8443)))
