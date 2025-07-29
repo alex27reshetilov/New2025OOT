@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 TELEGRAM_BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 # Telegram bot app
-app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+app = ApplicationBuilder().token(7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c).build()
 response_mode = 'summary'
 
 # ======== AWS Functions ========
