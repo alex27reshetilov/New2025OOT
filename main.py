@@ -2,31 +2,24 @@ import os
 import re
 import logging
 import boto3
-from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Application, MessageHandler, CallbackQueryHandler, ContextTypes,
-    filters
+    ApplicationBuilder, MessageHandler, CallbackQueryHandler, CommandHandler,
+    ContextTypes, filters
 )
 from botocore.exceptions import ClientError, NoCredentialsError, PartialCredentialsError
-
-# Завантаження токенів з середовища
-TELEGRAM_BOT_TOKEN = os.environ.get('7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c')
-WEBHOOK_BASE_URL = os.environ.get('https://botbotbot.osc-fr1.scalingo.io/7334751827:AAExmST813pOdSbTa_Yp40PiMJV4A3CeX6c')
-
-# Flask app
-flask_app = Flask(__name__)
-
-# Telegram bot app
-app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
 # Логування
 logging.basicConfig(level=logging.INFO)
 
-# Глобальна змінна
+# Токен із середовища
+TELEGRAM_BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+# Telegram bot app
+app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 response_mode = 'summary'
 
-# ======== AWS ========
+# ======== AWS Functions ========
 
 def get_access_key_creation_date(session, access_key_id):
     try:
@@ -129,7 +122,7 @@ def find_duplicates(accounts):
             seen_keys[key] = i
     return duplicates
 
-# ======== Telegram handlers ========
+# ======== Telegram Handlers ========
 
 async def send_mode_keyboard(update: Update):
     keyboard = [
@@ -236,22 +229,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(summary)
     await send_mode_keyboard(update)
 
-# ======== Handlers ========
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Привіт! Надішли список AWS акаунтів у форматі:")
+
+# Register handlers
+app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 app.add_handler(CallbackQueryHandler(handle_callback))
 
-# ======== Webhook endpoint ========
-@flask_app.route(f'/{TELEGRAM_BOT_TOKEN}', methods=['POST'])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), app.bot)
-    app.update_queue.put(update)
-    return 'OK'
-
-@flask_app.route('/')
-def index():
-    return "Bot is running!"
-
-# ======== Start ========
-if __name__ == '__main__':
-    app.bot.set_webhook(url=f"{WEBHOOK_BASE_URL}/{TELEGRAM_BOT_TOKEN}")
-    flask_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8443)))
+# Start polling
+if __name__ == "__main__":
+    app.run_polling()
