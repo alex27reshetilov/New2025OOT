@@ -1,5 +1,2 @@
-flask
-boto3
-gunicorn
 python-telegram-bot==20.3
-botocore
+boto3
