@@ -1,4 +1,5 @@
-python-telegram-bot==20.6
-Flask
+flask
 boto3
 gunicorn
+python-telegram-bot>=20.0
+botocore
